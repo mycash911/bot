@@ -15,6 +15,7 @@ function closeApprovalModal(){
   approvalModal.classList.add("hidden");
 }
 
+
 closeApprovalBtn?.addEventListener("click", closeApprovalModal);
 modalCancelBtn?.addEventListener("click", closeApprovalModal);
 
