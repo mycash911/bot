@@ -937,7 +937,10 @@ document.querySelectorAll(".footer-title").forEach(btn => {
 
 
 
-
+function copyWallet() {
+  const fullAddress = currentAddress; // IMPORTANT: copy full, not truncated
+  navigator.clipboard.writeText(fullAddress);
+}
 
 
 
