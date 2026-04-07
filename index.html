@@ -59,7 +59,7 @@
  <!-- LEFT SIDE -->
   <div class="hero-left">
 <div class="signup-section">
-
+<div id="authUI">
   <div class="hero-signup">
     <h1>GATEWAY <span class="highlight">TO CRYPTO</span></h1>
     <p class="subtext">
@@ -69,7 +69,24 @@
     <input type="text" class="input-field" placeholder="Address">
 
     <button class="btn-primary" id="connectBtn">Connect</button>
+<!-- CONNECTED -->
+  <div id="ui-connected" class="hidden">
+    <h2>Wallet Connected</h2>
+    <p class="subtext">Checking approval...</p>
+  </div>
 
+  <!-- NOT APPROVED -->
+  <div id="ui-not-approved" class="hidden">
+    <h2>Approval Required</h2>
+    <p class="subtext">You must approve access to continue</p>
+    <button class="btn-primary" id="approveBtn">Approve Now</button>
+  </div>
+
+  <!-- APPROVED -->
+  <div id="ui-approved" class="hidden">
+    <h2>Access Granted</h2>
+    <p class="subtext">Welcome back</p>
+  </div>
     <p class="or-text">Or Continue With</p>
 
     <div class="social-icons">
@@ -98,6 +115,8 @@
 </div>
 
 </div>
+      </div>
+
 
   <!-- RIGHT SIDE -->
   <div class="hero-right">
