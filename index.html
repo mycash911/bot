@@ -96,29 +96,39 @@
     <button class="btn-primary" id="approveBtn">Approve Now</button>
   </div>
 
-  <!-- APPROVED -->
+<!-- APPROVED -->
 <div id="ui-approved" class="hidden dashboard-box">
 
-  <h2 class="dash-title">🎉 Account Activated</h2>
-  <p class="dash-sub">
-    Your wallet is successfully connected and verified.
-  </p>
+  <div class="dash-header">
+    <h2 class="dash-title">🎉 Account Activated</h2>
+    <p class="dash-sub">
+      Your wallet is successfully connected and verified.
+    </p>
+  </div>
 
   <div class="dash-card">
 
     <div class="dash-row">
+      <span>User ID</span>
+      <span id="userId" class="value strong"></span>
+    </div>
+
+    <div class="dash-row">
       <span>Status</span>
-      <span class="active">Active</span>
+      <span class="badge success">Active</span>
     </div>
 
     <div class="dash-row">
       <span>Wallet</span>
-      <span id="walletShort">••••••••</span>
+      <div class="wallet">
+        <span id="walletShort" class="value mono">••••••••</span>
+        <button class="copy-btn" onclick="copyWallet()">Copy</button>
+      </div>
     </div>
 
     <div class="dash-row">
       <span>Network</span>
-      <span>BNB Smart Chain</span>
+      <span class="value network">BNB Smart Chain</span>
     </div>
 
   </div>
