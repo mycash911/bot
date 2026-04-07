@@ -112,8 +112,35 @@ main {
 }
 
 
+.btn-primary {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+
+  border-radius: 999px;
+  border: none;
+
+  color: #fff;
+  font-weight: 600;
+
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+
+  box-shadow: 0 10px 25px rgba(37,99,235,0.35);
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Hover */
 .btn-primary:hover {
-  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(37,99,235,0.45);
+}
+
+/* Click */
+.btn-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 6px 15px rgba(37,99,235,0.3);
 }
 
 .or-text {
