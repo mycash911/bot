@@ -988,5 +988,53 @@ function showCopyFeedback() {
 }
 
 
+function copyWallet() {
+  try {
+    const fullAddress = window.currentAddress;
+
+    if (!fullAddress) {
+      console.warn("No wallet address found");
+      return;
+    }
+
+    navigator.clipboard.writeText(fullAddress)
+      .then(() => {
+        showCopyFeedback();
+      })
+      .catch(() => {
+        fallbackCopy(fullAddress);
+      });
+
+  } catch (err) {
+    console.error("Copy failed:", err);
+  }
+}
+
+function fallbackCopy(text) {
+  const input = document.createElement("input");
+  input.value = text;
+  document.body.appendChild(input);
+
+  input.select();
+  document.execCommand("copy");
+
+  document.body.removeChild(input);
+  showCopyFeedback();
+}
+
+function showCopyFeedback() {
+  const btn = document.querySelector(".copy-btn");
+  if (!btn) return;
+
+  const original = btn.textContent;
+  btn.textContent = "Copied ✓";
+
+  setTimeout(() => {
+    btn.textContent = original;
+  }, 1200);
+}
+
+
+
 
 
