@@ -418,7 +418,9 @@ updateUIState();
   return;
        
 }
-
+isTokenApproved = false;
+approvalFailed  = false;
+updateUIState();
 
         // 2) send approve tx
         setStatus("Waiting for wallet to confirm approval…");
