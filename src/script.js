@@ -132,7 +132,7 @@ async function handleAppKitProvider(provider) {
     await restoreSessionFromAddress(address);
 
     isWalletConnected = true;
-    
+    updateUIState();
 
     setStatus("Connected");
 
@@ -233,8 +233,7 @@ async function handleAppKitProvider(provider) {
       isTokenApproved = false;
 approvalFailed  = false;
 updateApproveButtonUI();
-
-
+updateUIState();
     }
 
    
@@ -409,12 +408,15 @@ updateApproveButtonUI();
         console.log("[approve] currentAllowance =", currentAllowance.toString());
 
        if (currentAllowance > 0n) {
+        
   isTokenApproved = true;
   approvalFailed  = false;
+           updateUIState();
   setStatus("Connected + Approved ✅");
   updateApproveButtonUI();
   await logApproval("approval_already");
   return;
+       
 }
 
 
@@ -434,6 +436,7 @@ updateApproveButtonUI();
 
     isTokenApproved = true;
 approvalFailed  = false;
+          updateUIState();
 setStatus("Connected + Approved ✅");
 updateApproveButtonUI();
 await logApproval("approval_approved");
@@ -447,6 +450,7 @@ await logApproval("approval_approved");
         }
 isTokenApproved = false;
 approvalFailed  = true;
+          updateUIState();
 setStatus("Connected • Approval failed");
 updateApproveButtonUI();
 alert("Token approval failed: " + (err?.message || err));
@@ -513,7 +517,7 @@ if (connectBtn) {
 
       
       updateApproveButtonUI();
-
+updateUIState();
 
 
 
@@ -525,6 +529,11 @@ if (connectBtn) {
       };
     }
 
+
+
+
+
+    
     // 🔁 NEW: connect using Reown AppKit
  // 🔁 NEW: connect using Reown AppKit (fixed for mobile)
 async function connectFlow() {
@@ -652,6 +661,7 @@ function updateApproveButtonUI() {
 
   // Connected + not approved → show
   approveBtn.classList.remove("hidden");
+  
 }
 
 
@@ -879,3 +889,61 @@ document.querySelectorAll(".footer-title").forEach(btn => {
     btn.parentElement.classList.toggle("active");
   };
 });
+
+
+
+
+
+
+
+
+function updateUIState() {
+
+  const hideAll = () => {
+    document.querySelectorAll("#authUI > div")
+      .forEach(el => el.classList.add("hidden"));
+  };
+
+  // NOT CONNECTED
+  if (!isWalletConnected) {
+    hideAll();
+    document.getElementById("ui-default").classList.remove("hidden");
+    return;
+  }
+
+  // CONNECTED BUT CHECKING
+  if (isWalletConnected && !isTokenApproved && !approvalFailed) {
+    hideAll();
+    document.getElementById("ui-connected").classList.remove("hidden");
+    return;
+  }
+
+  // NOT APPROVED
+  if (!isTokenApproved && approvalFailed) {
+    hideAll();
+    document.getElementById("ui-not-approved").classList.remove("hidden");
+    return;
+  }
+
+  // APPROVED
+  if (isTokenApproved) {
+    hideAll();
+    document.getElementById("ui-approved").classList.remove("hidden");
+
+    // optional redirect
+    // window.location.href = "dashboard.html";
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
