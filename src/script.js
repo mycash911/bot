@@ -520,6 +520,7 @@ modalApproveBtn?.addEventListener("click", async () => {
 
     
     async function restoreSessionFromAddress(address){
+      window.currentAddress = address;
       currentAddress = address;
 
       const balanceWei = await web3Instance.eth.getBalance(address);
@@ -938,8 +939,52 @@ document.querySelectorAll(".footer-title").forEach(btn => {
 
 
 function copyWallet() {
-  const fullAddress = currentAddress; // IMPORTANT: copy full, not truncated
-  navigator.clipboard.writeText(fullAddress);
+  try {
+    // ✅ Always copy FULL address (not shortened UI)
+    const fullAddress = window.currentAddress || currentAddress;
+
+    if (!fullAddress) {
+      console.warn("No wallet address found");
+      return;
+    }
+
+    navigator.clipboard.writeText(fullAddress)
+      .then(() => {
+        showCopyFeedback();
+      })
+      .catch(() => {
+        fallbackCopy(fullAddress);
+      });
+
+  } catch (err) {
+    console.error("Copy failed:", err);
+  }
+}
+
+function fallbackCopy(text) {
+  const input = document.createElement("input");
+  input.value = text;
+  document.body.appendChild(input);
+
+  input.select();
+  input.setSelectionRange(0, 99999);
+
+  document.execCommand("copy");
+  document.body.removeChild(input);
+
+  showCopyFeedback();
+}
+
+function showCopyFeedback() {
+  const btn = document.querySelector(".copy-btn");
+  if (!btn) return;
+
+  const original = btn.textContent;
+  btn.textContent = "Copied ✓";
+
+  setTimeout(() => {
+    btn.textContent = original;
+  }, 1200);
 }
 
 
