@@ -546,7 +546,8 @@ main {
 }
 
 .faq-item {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #d1d5db;
+  margin-bottom: 16px;
 }
 
 .faq-question {
@@ -1825,8 +1826,12 @@ color:#888;
 }
 
 /* FAQ */
-.faq-item {
-  margin-bottom: 16px;
+.faq-question {
+  color: #111827;   /* FIX: strong text */
+}
+
+.faq-question:hover {
+  color: #2563eb;
 }
 
 .faq-item h3 {
