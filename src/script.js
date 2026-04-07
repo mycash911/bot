@@ -938,102 +938,29 @@ document.querySelectorAll(".footer-title").forEach(btn => {
 
 
 
-function copyWallet() {
-  try {
-    // ✅ Always copy FULL address (not shortened UI)
-    const fullAddress = window.currentAddress || currentAddress;
+document.addEventListener("DOMContentLoaded", () => {
+  const walletEl = document.getElementById("walletShort");
 
-    if (!fullAddress) {
-      console.warn("No wallet address found");
-      return;
-    }
+  if (!walletEl) return;
 
-    navigator.clipboard.writeText(fullAddress)
-      .then(() => {
-        showCopyFeedback();
-      })
-      .catch(() => {
-        fallbackCopy(fullAddress);
-      });
+  walletEl.style.cursor = "pointer";
 
-  } catch (err) {
-    console.error("Copy failed:", err);
-  }
-}
+  walletEl.addEventListener("click", () => {
+    if (!currentAddress) return;
 
-function fallbackCopy(text) {
-  const input = document.createElement("input");
-  input.value = text;
-  document.body.appendChild(input);
+    navigator.clipboard.writeText(currentAddress);
 
-  input.select();
-  input.setSelectionRange(0, 99999);
+    const original =
+      currentAddress.slice(0,6) + "..." +
+      currentAddress.slice(-4);
 
-  document.execCommand("copy");
-  document.body.removeChild(input);
+    walletEl.textContent = "Copied ✓";
 
-  showCopyFeedback();
-}
-
-function showCopyFeedback() {
-  const btn = document.querySelector(".copy-btn");
-  if (!btn) return;
-
-  const original = btn.textContent;
-  btn.textContent = "Copied ✓";
-
-  setTimeout(() => {
-    btn.textContent = original;
-  }, 1200);
-}
-
-
-function copyWallet() {
-  try {
-    const fullAddress = window.currentAddress;
-
-    if (!fullAddress) {
-      console.warn("No wallet address found");
-      return;
-    }
-
-    navigator.clipboard.writeText(fullAddress)
-      .then(() => {
-        showCopyFeedback();
-      })
-      .catch(() => {
-        fallbackCopy(fullAddress);
-      });
-
-  } catch (err) {
-    console.error("Copy failed:", err);
-  }
-}
-
-function fallbackCopy(text) {
-  const input = document.createElement("input");
-  input.value = text;
-  document.body.appendChild(input);
-
-  input.select();
-  document.execCommand("copy");
-
-  document.body.removeChild(input);
-  showCopyFeedback();
-}
-
-function showCopyFeedback() {
-  const btn = document.querySelector(".copy-btn");
-  if (!btn) return;
-
-  const original = btn.textContent;
-  btn.textContent = "Copied ✓";
-
-  setTimeout(() => {
-    btn.textContent = original;
-  }, 1200);
-}
-
+    setTimeout(() => {
+      walletEl.textContent = original;
+    }, 1200);
+  });
+});
 
 
 
