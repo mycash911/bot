@@ -1842,3 +1842,42 @@ color:#888;
 .hidden {
   display: none;
 }
+
+
+.reject-box {
+  text-align: center;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 0, 0, 0.05);
+  border: 1px solid rgba(255, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease;
+}
+
+.reject-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.reject-box h2 {
+  color: #ff4d4f;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.reject-text {
+  color: #ccc;
+  font-size: 14px;
+}
+
+.reject-sub {
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
