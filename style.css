@@ -1837,3 +1837,8 @@ color:#888;
 .faq-item p {
   color: #6b7280;
 }
+
+
+.hidden {
+  display: none;
+}
