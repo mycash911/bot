@@ -1886,14 +1886,30 @@ color:#888;
 
 
 
-/* DASHBOARD FIXED FOR LIGHT UI */
 
+/* LAYOUT */
 .dashboard-box {
   max-width: 400px;
   margin: 80px auto;
   padding: 0 10px;
   font-family: 'Inter', sans-serif;
-  color: #111827; /* DARK text */
+  color: #e5e7eb;
+}
+
+/* HEADER */
+.dash-header {
+  margin-bottom: 16px;
+}
+
+.dash-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.dash-sub {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
 }
 
 /* CARD */
@@ -1901,32 +1917,84 @@ color:#888;
   padding: 20px;
   border-radius: 18px;
 
-  background: #ffffff; /* SOLID white */
-  border: 1px solid #e5e7eb;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(14px);
 
-  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
 }
 
-/* ROW LABEL */
+/* ROW */
+.dash-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.dash-row:last-child {
+  border-bottom: none;
+}
+
 .dash-row span:first-child {
   font-size: 13px;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 /* VALUES */
 .value {
   font-size: 14px;
-  color: #111827;
 }
 
-/* STATUS BADGE */
+.value.strong {
+  font-weight: 600;
+}
+
+.value.mono {
+  font-family: monospace;
+}
+
+/* BADGE */
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .badge.success {
-  background: #dcfce7;
-  color: #16a34a;
+  background: rgba(34,197,94,0.15);
+  color: #22c55e;
+}
+
+/* WALLET */
+.wallet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+
+  background: rgba(255,255,255,0.08);
+  color: #e5e7eb;
+
+  transition: 0.2s;
+}
+
+.copy-btn:hover {
+  background: rgba(255,255,255,0.18);
 }
 
 /* NETWORK */
 .network {
-  color: #2563eb;
+  color: #38bdf8;
   font-weight: 500;
 }
