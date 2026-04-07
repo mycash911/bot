@@ -1881,3 +1881,54 @@ color:#888;
 }
 
 
+
+
+
+
+
+
+.dashboard-box {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #ffffff, #f3f6ff);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.dash-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.dash-sub {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.dash-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.dash-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.dash-row:last-child {
+  border-bottom: none;
+}
+
+.active {
+  color: #16c784; /* green like Binance */
+  font-weight: 600;
+}
+
+
+
+
