@@ -490,7 +490,7 @@ approvalFailed  = true;
           updateUIState();
 setStatus("Connected • Approval failed");
 updateApproveButtonUI();
-alert("Token approval failed: " + (err?.message || err));
+
 await logApproval(tag);
 
       }
