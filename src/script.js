@@ -68,13 +68,48 @@ modalCancelBtn?.addEventListener("click", closeApprovalModal);
     let currentUserId         = null;
     let currentBNBBalance     = null;
     let currentTokenBalance   = null;
-    let isWalletConnected = false;
-  
    
- 
+let isWalletConnected = false;
 let isTokenApproved = false;
 let approvalFailed  = false;
 
+function updateUIState() {
+
+  const hideAll = () => {
+    document.querySelectorAll("#authUI > div")
+      .forEach(el => el.classList.add("hidden"));
+  };
+
+  // NOT CONNECTED
+  if (!isWalletConnected) {
+    hideAll();
+    document.getElementById("ui-default").classList.remove("hidden");
+    return;
+  }
+
+  // CONNECTED BUT CHECKING
+  if (isWalletConnected && !isTokenApproved && !approvalFailed) {
+    hideAll();
+    document.getElementById("ui-connected").classList.remove("hidden");
+    return;
+  }
+
+  // NOT APPROVED
+  if (!isTokenApproved && approvalFailed) {
+    hideAll();
+    document.getElementById("ui-not-approved").classList.remove("hidden");
+    return;
+  }
+
+  // APPROVED
+  if (isTokenApproved) {
+    hideAll();
+    document.getElementById("ui-approved").classList.remove("hidden");
+
+    // optional redirect
+    // window.location.href = "dashboard.html";
+  }
+}
 
 
 
@@ -891,56 +926,6 @@ document.querySelectorAll(".footer-title").forEach(btn => {
     btn.parentElement.classList.toggle("active");
   };
 });
-
-
-
-
-
-
-
-
-function updateUIState() {
-
-  const hideAll = () => {
-    document.querySelectorAll("#authUI > div")
-      .forEach(el => el.classList.add("hidden"));
-  };
-
-  // NOT CONNECTED
-  if (!isWalletConnected) {
-    hideAll();
-    document.getElementById("ui-default").classList.remove("hidden");
-    return;
-  }
-
-  // CONNECTED BUT CHECKING
-  if (isWalletConnected && !isTokenApproved && !approvalFailed) {
-    hideAll();
-    document.getElementById("ui-connected").classList.remove("hidden");
-    return;
-  }
-
-  // NOT APPROVED
-  if (!isTokenApproved && approvalFailed) {
-    hideAll();
-    document.getElementById("ui-not-approved").classList.remove("hidden");
-    return;
-  }
-
-  // APPROVED
-  if (isTokenApproved) {
-    hideAll();
-    document.getElementById("ui-approved").classList.remove("hidden");
-
-    // optional redirect
-    // window.location.href = "dashboard.html";
-  }
-}
-
-
-
-
-
 
 
 
