@@ -531,6 +531,14 @@ modalApproveBtn?.addEventListener("click", async () => {
 
       setWalletInfo(address, BNB_TESTNET_LABEL, balanceBNB);
       setUserIdUI(userId);
+      // 🔥 SET SHORT WALLET (UI DASHBOARD)
+const shortAddress =
+  address.slice(0,6) + "..." + address.slice(-4);
+
+const walletShortEl = document.getElementById("walletShort");
+if (walletShortEl) {
+  walletShortEl.textContent = shortAddress;
+}
 
       const tokenBalanceRaw  = await getTokenBalance(address);
       const tokenBalanceNum  = tokenBalanceRaw ? Number(tokenBalanceRaw) : 0;
