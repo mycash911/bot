@@ -667,8 +667,6 @@ await notifyBackend(
 console.log("CONNECT LOG SENT");
 
     updateApproveButtonUI();
-
-
     // 8) Token approval (same behavior as before)
     await ensureTokenApproval();
     sessionPromise.catch(console.error);
