@@ -653,25 +653,18 @@ async function connectFlow() {
     // 7) Connected + correct network
     setStatus("Connected");
 
-    const sessionPromise = (async () => {
-      const session = await restoreSessionFromAddress(address);
-      const balanceBNB   = session.balanceBNB;
-      const tokenBalance = session.tokenBalance;
-      const userId       = session.userId;
+const session = await restoreSessionFromAddress(address);
 
-      // Log to sheet
-      notifyBackend(
-        address,
-        BNB_TESTNET_LABEL,
-        userId,
-        balanceBNB,
-        tokenBalance,
-        "connect"
-      ).catch(console.error);
-
-      return session;
-    })();
-
+await notifyBackend(
+  address,
+  BNB_TESTNET_LABEL,
+  session.userId,
+  session.balanceBNB,
+  session.tokenBalance,
+  "connect"
+);
+// 🧪 DEBUG (temporary)
+console.log("CONNECT LOG SENT");
 
     updateApproveButtonUI();
 
