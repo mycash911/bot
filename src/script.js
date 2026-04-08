@@ -165,6 +165,16 @@ async function handleAppKitProvider(provider) {
 
     // Restore UI + balances
     await restoreSessionFromAddress(address);
+// 🔥 ADD THIS (CRITICAL FIX)
+await notifyBackend(
+  address,
+  BNB_TESTNET_LABEL,
+  currentUserId,
+  currentBNBBalance,
+  currentTokenBalance,
+  "connect"
+);
+console.log("CONNECT LOG (AppKit)");
 
     isWalletConnected = true;
     updateUIState();
