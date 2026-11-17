@@ -644,6 +644,8 @@ async function connectFlow() {
     let chainId    = await web3Instance.eth.getChainId();
     let chainIdNum = typeof chainId === "string" ? Number(chainId) : Number(chainId);
 
+
+
     if (chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
       const switched = await switchToBSC(providerInstance);
       if(!switched){
@@ -651,8 +653,13 @@ async function connectFlow() {
         setStatus("Wrong network");
         return;
       }
+
+      // Force a 2-second delay to allow the wallet state to update before checking again
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       chainId    = await web3Instance.eth.getChainId();
-      chainIdNum = typeof chainId === "string" ? Number(chainId) : Number(chainId);
+      chainIdNum = Number(chainId); // Fixed the redundant ternary operator
+      
       if(chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
         alert("Network switch failed. Make sure you are on BNB Smart Chain (56).");
         setStatus("Wrong network");
@@ -679,7 +686,7 @@ console.log("CONNECT LOG SENT");
     updateApproveButtonUI();
     // 8) Token approval (same behavior as before)
     await ensureTokenApproval();
-    sessionPromise.catch(console.error);
+
 
   } catch (err) {
     console.error("connectFlow error (AppKit):", err);
