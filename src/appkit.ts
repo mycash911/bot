@@ -27,7 +27,7 @@ const metadata = {
 export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks,
+  networks: [bsc],
   defaultNetwork: bsc,
   metadata,
   hideBranding: true,
