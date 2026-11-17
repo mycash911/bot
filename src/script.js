@@ -646,25 +646,11 @@ async function connectFlow() {
 
 
 
-    if (chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
-      const switched = await switchToBSC(providerInstance);
-      if(!switched){
-        alert("Please switch to BNB Smart Chain (56) in your wallet and try again.");
-        setStatus("Wrong network");
-        return;
-      }
-
-      // Force a 2-second delay to allow the wallet state to update before checking again
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      chainId    = await web3Instance.eth.getChainId();
-      chainIdNum = Number(chainId); // Fixed the redundant ternary operator
-      
-      if(chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
-        alert("Network switch failed. Make sure you are on BNB Smart Chain (56).");
-        setStatus("Wrong network");
-        return;
-      }
+ if (chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
+      // Open AppKit's native network switcher instead of forcing a raw RPC call
+      window.appKit.open({ view: 'Networks' });
+      setStatus("Wrong network");
+      return; 
     }
 
     // 7) Connected + correct network
