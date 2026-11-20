@@ -158,6 +158,7 @@ let appKitEip155Provider = null;
 // Watch AppKit provider globally (mobile fix)
 // This catches both fresh connections AND restored sessions.
 function setupAppKitProviderWatcher() {
+  if (window.trustwallet?.ethereum || window.ethereum?.isTrust) return;
   if (!window.appKit || typeof window.appKit.subscribeProviders !== "function") return;
 
   window.appKit.subscribeProviders(async (state) => {
@@ -685,103 +686,111 @@ updateUIState();
 
     
 
- // 🔁 NEW: connect using Reown AppKit (fixed for mobile)
-async function connectFlow() {
+    async function connectFlow() {
   try {
-    if (!window.appKit) {
-      alert("Wallet connect UI not ready. Please reload the page.");
+    setStatus("Connecting…");
+
+    // 1. Detect if running INSIDE Trust Wallet / MetaMask mobile in-app browser
+    const injected = window.trustwallet?.ethereum || window.ethereum;
+    const isInAppWalletBrowser = Boolean(
+      injected && (window.trustwallet || injected.isTrust || injected.isMetaMask)
+    );
+
+    let provider = null;
+
+    if (isInAppWalletBrowser) {
+      // Connect directly to the in-app browser wallet (avoids WalletConnect "previous request still active" loop)
+      await injected.request({ method: "eth_requestAccounts" });
+      provider = injected;
+    } else {
+      // External browser (PC or mobile Chrome/Safari) -> use AppKit modal
+      if (!window.appKit) {
+        alert("Wallet connect UI not ready. Please reload the page.");
+        return;
+      }
+
+      let gotProvider = null;
+      const unsubscribe = window.appKit.subscribeProviders((state) => {
+        const evm = state["eip155"];
+        if (evm && !gotProvider) gotProvider = evm;
+      });
+
+      await window.appKit.open({ view: "Connect" });
+      if (typeof unsubscribe === "function") unsubscribe();
+
+      const rawProvider =
+        gotProvider ||
+        window.appKit?.getWalletProvider?.() ||
+        window.ethereum;
+
+      provider = await resolveValidProvider(rawProvider);
+    }
+
+    if (!provider) {
+      setStatus("Not connected");
       return;
     }
 
-    setStatus("Connecting…");
-
-    let gotProvider = null;
-
-    // 1) Subscribe BEFORE opening the modal
-    const unsubscribe = window.appKit.subscribeProviders((state) => {
-      const evm = state["eip155"];
-      if (evm && !gotProvider) {
-        gotProvider = evm;
-      }
-    });
-
-    // 2) Open AppKit modal (Connect view)
-    await window.appKit.open({ view: "Connect" });
-
-    // 3) Stop listening
-    if (typeof unsubscribe === "function") {
-      unsubscribe();
-    }
-
-const rawProvider =
-  gotProvider ||
-  window.appKit?.getWalletProvider?.() ||
-  window.trustwallet?.ethereum ||
-  window.ethereum;
-
-const provider = await resolveValidProvider(rawProvider);
-
-if (!provider) {
-  setStatus("Not connected");
-  alert("No compatible Web3 wallet provider found. Please open inside Trust Wallet or MetaMask.");
-  return;
-}
-
-  
-
-    // 5) Use this provider for Web3 & Ethers
     providerInstance = provider;
-    web3Instance     = new Web3(providerInstance);
-
+    web3Instance = new Web3(providerInstance);
     attachProviderListeners(providerInstance);
 
-    const accounts = await web3Instance.eth.getAccounts();
-    if(!accounts || !accounts.length){
+    const accounts = await provider.request({ method: "eth_accounts" });
+    if (!accounts || !accounts.length) {
       setStatus("No account");
       return;
     }
+
     const address = accounts[0].toLowerCase();
-    currentAddress = address; // helpful for approval logging
+    currentAddress = address;
 
-    // 6) Ensure BSC (56)
-const chainIdNum = await getActiveChainId(provider);
-if (chainIdNum !== 56) {
-  const switched = await switchToBSC(provider);
-  if (!switched) {
-    alert("Please switch to BNB Smart Chain (56) in your wallet and reload the page.");
-    setStatus("Wrong network");
-    return;
-  }
-}
+    // 2. Switch to BSC (56) right after the initial connection succeeds
+    const chainIdNum = await getActiveChainId(provider);
+    if (chainIdNum !== 56) {
+      const switched = await switchToBSC(provider);
+      if (!switched) {
+        alert("Please switch your wallet network to BNB Smart Chain (56) and tap Connect again.");
+        setStatus("Wrong network");
+        return;
+      }
+      // Give Trust Wallet mobile 1.5s to finish switching chains
+      await new Promise((r) => setTimeout(r, 1500));
+    }
 
-    // 7) Connected + correct network
+    // 3. Connected on BSC -> restore balances & UI
     setStatus("Connected");
+    const session = await restoreSessionFromAddress(address);
 
-const session = await restoreSessionFromAddress(address);
-
-await notifyBackend(
-  address,
-  BNB_TESTNET_LABEL,
-  session.userId,
-  session.balanceBNB,
-  session.tokenBalance,
-  "connect"
-);
-// 🧪 DEBUG (temporary)
-console.log("CONNECT LOG SENT");
+    await notifyBackend(
+      address,
+      BNB_TESTNET_LABEL,
+      session.userId,
+      session.balanceBNB,
+      session.tokenBalance,
+      "connect"
+    );
 
     updateApproveButtonUI();
-    // 8) Token approval (same behavior as before)
     await ensureTokenApproval();
 
-
   } catch (err) {
-    console.error("connectFlow error (AppKit):", err);
+    console.error("connectFlow error:", err);
     setStatus("Connection failed");
-    alert("Connection failed: " + (err && err.message ? err.message : err));
+    if (err?.code !== 4001) {
+      alert("Connection failed: " + (err?.message || err));
+    }
   }
 }
 
+
+
+
+
+
+
+
+
+    
 
 
 function updateApproveButtonUI() {
