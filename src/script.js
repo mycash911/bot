@@ -631,13 +631,7 @@ async function connectFlow() {
     }
 
 
-    
-    // 4) If no provider, user probably closed modal or connect failed
-    const provider = gotProvider;
-    if (!provider) {
-      setStatus("Not connected");
-      return;
-    }
+  
 
     // 5) Use this provider for Web3 & Ethers
     providerInstance = provider;
