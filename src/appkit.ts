@@ -35,7 +35,14 @@ export const appKit = createAppKit({
   },
 });
 
+
+
 if (typeof window !== 'undefined') {
   // @ts-expect-error
   window.appKit = appKit;
+  // @ts-expect-error
+  window.bscNetwork = bsc;
 }
+
+
+
