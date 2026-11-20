@@ -362,38 +362,87 @@ updateUIState();
       }
     }
 
-    async function switchToBSC(provider){
-      try{
-        await provider.request({
-          method:"wallet_switchEthereumChain",
-          params:[{chainId:BNB_TESTNET_CHAIN_ID_HEX}]
+
+
+
+
+    
+function normalizeChainId(raw) {
+  if (raw === null || raw === undefined) return 0;
+  if (typeof raw === "bigint") return Number(raw);
+  if (typeof raw === "number") return raw;
+  const str = String(raw).trim();
+  // If it starts with 0x, parse as hex; otherwise parse as base-10
+  return str.startsWith("0x") || str.startsWith("0X")
+    ? parseInt(str, 16)
+    : parseInt(str, 10);
+}
+
+async function getActiveChainId(provider) {
+  // 1. Check AppKit's active chain ID first
+  const appKitChain = window.appKit?.getChainId?.();
+  if (appKitChain) {
+    const parsed = normalizeChainId(appKitChain);
+    if (parsed === 56) return 56;
+  }
+
+  // 2. Check the raw provider directly
+  const target = provider || window.trustwallet?.ethereum || window.ethereum;
+  if (target && typeof target.request === "function") {
+    try {
+      const hex = await target.request({ method: "eth_chainId" });
+      return normalizeChainId(hex);
+    } catch (e) {
+      console.warn("eth_chainId failed:", e);
+    }
+  }
+  return 0;
+}
+
+async function switchToBSC(provider) {
+  try {
+    // 1. Use AppKit's native switchNetwork (required for WagmiAdapter)
+    if (window.appKit && typeof window.appKit.switchNetwork === "function" && window.bscNetwork) {
+      await window.appKit.switchNetwork(window.bscNetwork);
+      await new Promise((r) => setTimeout(r, 1000));
+      if ((await getActiveChainId(provider)) === 56) return true;
+    }
+
+    // 2. Fallback to direct injected wallet switch
+    const target = window.trustwallet?.ethereum || window.ethereum || provider;
+    if (!target || typeof target.request !== "function") return false;
+
+    await target.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0x38" }],
+    });
+    return true;
+  } catch (switchError) {
+    if (switchError && switchError.code === 4902) {
+      try {
+        const target = window.trustwallet?.ethereum || window.ethereum || provider;
+        await target.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: "0x38",
+              chainName: "BNB Smart Chain",
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              rpcUrls: ["https://bsc-dataseed.binance.org"],
+              blockExplorerUrls: ["https://bscscan.com"],
+            },
+          ],
         });
         return true;
-      }catch(switchError){
-        if(switchError.code === 4902){
-          try{
-            await provider.request({
-              method:"wallet_addEthereumChain",
-              params:[{
-                chainId:BNB_TESTNET_CHAIN_ID_HEX,
-                chainName:"BNB Smart Chain",
-                nativeCurrency:{name:"BNB",symbol:"BNB",decimals:18},
-                rpcUrls:[BNB_TESTNET_RPC],
-                blockExplorerUrls:["https://bscscan.com"]
-              }]
-            });
-            return true;
-          }catch(addErr){
-            console.error("Could not add BNB Smart Chain:", addErr);
-            return false;
-          }
-        }
-        console.error("Switch error:", switchError);
+      } catch (addErr) {
+        console.error("Could not add BNB Smart Chain:", addErr);
         return false;
       }
     }
-
-
+    console.error("Switch error:", switchError);
+    return false;
+  }
+}
 
 
 
@@ -431,16 +480,15 @@ async function ensureTokenApproval() {
 
     setStatus("Checking network…");
 
-    // 2. Ensure wallet is on BSC (0x38) right before sending tx
-    const currentChainHex = await provider.request({ method: "eth_chainId" });
-    if (Number(currentChainHex) !== 56) {
-      const switched = await switchToBSC(provider);
-      if (!switched) {
-        alert("Please switch your wallet to BNB Smart Chain (56) and tap Approve again.");
-        setStatus("Wrong network");
-        return;
-      }
-    }
+   const chainIdNum = await getActiveChainId(provider);
+if (chainIdNum !== 56) {
+  const switched = await switchToBSC(provider);
+  if (!switched) {
+    alert("Please switch to BNB Smart Chain (56) in your wallet and reload the page.");
+    setStatus("Wrong network");
+    return;
+  }
+}
 
     // 3. Get active account
     const accounts = await provider.request({ method: "eth_requestAccounts" });
@@ -589,7 +637,7 @@ updateUIState();
 
 
     
-    // 🔁 NEW: connect using Reown AppKit
+
  // 🔁 NEW: connect using Reown AppKit (fixed for mobile)
 async function connectFlow() {
   try {
@@ -648,18 +696,16 @@ async function connectFlow() {
     currentAddress = address; // helpful for approval logging
 
     // 6) Ensure BSC (56)
-    let chainId    = await web3Instance.eth.getChainId();
-    let chainIdNum = typeof chainId === "string" ? Number(chainId) : Number(chainId);
-
-
-
- if (chainIdNum !== BNB_TESTNET_CHAIN_ID_DEC){
-      // Open AppKit's native network switcher instead of forcing a raw RPC call
-      window.appKit.open({ view: 'Networks' });
-      setStatus("Wrong network");
-      return; 
-    }
-
+const chainIdNum = await getActiveChainId(provider);
+if (chainIdNum !== 56) {
+  const switched = await switchToBSC(provider);
+  if (!switched) {
+    alert("Please switch to BNB Smart Chain (56) in your wallet and reload the page.");
+    setStatus("Wrong network");
+    return;
+  }
+}
+}
     // 7) Connected + correct network
     setStatus("Connected");
 
