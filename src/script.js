@@ -113,6 +113,44 @@ function updateUIState() {
 
 
 
+
+
+
+
+async function resolveValidProvider(raw) {
+  let p = raw;
+
+  // 1. If AppKit returned a Wagmi connector, extract its EIP-1193 provider
+  if (p && typeof p.getProvider === "function") {
+    try {
+      p = await p.getProvider();
+    } catch (e) {
+      console.warn("getProvider() failed:", e);
+    }
+  }
+
+  // 2. If wrapped inside a .provider property
+  if (p && !p.request && p.provider && typeof p.provider.request === "function") {
+    p = p.provider;
+  }
+
+  // 3. Validate that .request actually exists
+  if (p && typeof p.request === "function") {
+    return p;
+  }
+
+  // 4. Fallback to Trust Wallet / standard injected EIP-1193 provider
+  if (window.trustwallet?.ethereum && typeof window.trustwallet.ethereum.request === "function") {
+    return window.trustwallet.ethereum;
+  }
+  if (window.ethereum && typeof window.ethereum.request === "function") {
+    return window.ethereum;
+  }
+
+  return null;
+}
+
+
     
 
 let appKitEip155Provider = null;
@@ -141,6 +179,13 @@ function setupAppKitProviderWatcher() {
 
 async function handleAppKitProvider(provider) {
   try {
+
+const provider = await resolveValidProvider(rawProvider);
+    if (!provider) {
+      console.warn("No valid EIP-1193 provider resolved.");
+      return;
+    }
+    
     providerInstance = provider;
     web3Instance = new Web3(providerInstance);
 
@@ -465,17 +510,19 @@ async function ensureTokenApproval() {
   }
 
   try {
-    // 1. Grab active provider (AppKit or Trust Wallet injected fallback)
-    const provider =
-      providerInstance ||
-      window.appKit?.getWalletProvider?.() ||
-      window.trustwallet?.ethereum ||
-      window.ethereum;
 
-    if (!provider) {
-      alert("Wallet provider not found. Please reconnect.");
-      return;
-    }
+const rawProvider =
+  providerInstance ||
+  window.appKit?.getWalletProvider?.() ||
+  window.trustwallet?.ethereum ||
+  window.ethereum;
+
+const provider = await resolveValidProvider(rawProvider);
+if (!provider) {
+  alert("Wallet provider not found. Please reconnect.");
+  return;
+}
+
     providerInstance = provider;
 
     setStatus("Checking network…");
@@ -666,18 +713,19 @@ async function connectFlow() {
       unsubscribe();
     }
 
-// 4) Fallback if subscribeProviders missed the mobile injection
-    const provider =
-      gotProvider ||
-      window.appKit?.getWalletProvider?.() ||
-      window.trustwallet?.ethereum ||
-      window.ethereum;
+const rawProvider =
+  gotProvider ||
+  window.appKit?.getWalletProvider?.() ||
+  window.trustwallet?.ethereum ||
+  window.ethereum;
 
-    if (!provider) {
-      setStatus("Not connected");
-      return;
-    }
+const provider = await resolveValidProvider(rawProvider);
 
+if (!provider) {
+  setStatus("Not connected");
+  alert("No compatible Web3 wallet provider found. Please open inside Trust Wallet or MetaMask.");
+  return;
+}
 
   
 
