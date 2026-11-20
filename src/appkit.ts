@@ -13,7 +13,7 @@ const wagmiAdapter = new WagmiAdapter({
 const metadata = {
   name: 'BNB dApp',
   description: 'dApp on BSC',
-  url: typeof window !== 'undefined' ? window.location.origin : 'https://localhost',
+  url: 'https://mycash911.github.io/bot',
   icons: ['https://bscscan.com/images/svg/brands/bnb.svg'],
 };
 
