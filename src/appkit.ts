@@ -1,32 +1,27 @@
-// src/appkit.ts
 import { createAppKit } from '@reown/appkit';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { bsc,mainnet } from '@reown/appkit/networks';
+import { bsc, mainnet } from '@reown/appkit/networks';
 
-// 1. Your Reown project ID
-const projectId = 'ae0f6b930b1b9c6df3d82e88f78dec0b' ;
+const projectId = 'ae0f6b930b1b9c6df3d82e88f78dec0b';
+export const networks = [bsc, mainnet];
 
-// 2. Networks (BSC only)
-export const networks = [mainnet, bsc];
-// 3. Adapter
 const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks,
 });
 
-// 4. Metadata
 const metadata = {
-  name: 'BNB',
-  description: '  dApp on BSC',
-  url: 'https://.com',
-  icons: ['https://.com/icon.png'],
+  name: 'BNB dApp',
+  description: 'dApp on BSC',
+  url: typeof window !== 'undefined' ? window.location.origin : 'https://localhost',
+  icons: ['https://bscscan.com/images/svg/brands/bnb.svg'],
 };
 
 export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [mainnet, bsc], // Must match the exported array
-  defaultNetwork: bsc,      // Forces the prompt to switch to BSC
+  networks,
+  defaultNetwork: bsc,
   metadata,
   hideBranding: true,
   featuredWalletIds: [
@@ -40,7 +35,6 @@ export const appKit = createAppKit({
   },
 });
 
-// 🔹 Make it accessible to plain JS (your old functions)
 if (typeof window !== 'undefined') {
   // @ts-expect-error
   window.appKit = appKit;
