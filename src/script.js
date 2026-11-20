@@ -875,9 +875,7 @@ if (document.readyState === "loading") {
                               
                              
                              
-                             );
 
-  })();
   
 const coins = [
   { symbol: "BTCUSDT", name: "Bitcoin",
