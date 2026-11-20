@@ -298,11 +298,11 @@ updateUIState();
           await restoreSessionFromAddress(addr);
         });
 
-        p.on("chainChanged", function(chainId){
-          if(walletNetworkEl){
-            walletNetworkEl.textContent = BNB_TESTNET_LABEL + " (chain " + chainId + ")";
-          }
-        });
+   p.on("chainChanged", function (chainId) {
+  if (normalizeChainId(chainId) === 56 && currentAddress) {
+    restoreSessionFromAddress(currentAddress);
+  }
+});
 
         p.on("disconnect", function(){
           clearSessionUI();
