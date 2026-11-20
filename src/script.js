@@ -705,7 +705,7 @@ if (chainIdNum !== 56) {
     return;
   }
 }
-}
+
     // 7) Connected + correct network
     setStatus("Connected");
 
