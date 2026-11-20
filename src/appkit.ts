@@ -1,7 +1,7 @@
 // src/appkit.ts
 import { createAppKit } from '@reown/appkit';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { bsc } from '@reown/appkit/networks';
+import { bsc,mainnet } from '@reown/appkit/networks';
 
 // 1. Your Reown project ID
 const projectId = 'ae0f6b930b1b9c6df3d82e88f78dec0b' ;
